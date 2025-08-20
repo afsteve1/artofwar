@@ -38,6 +38,20 @@ def init_db() -> None:
             );
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                function TEXT,
+                prompt TEXT,
+                backend TEXT,
+                model TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
 
 
 def _row_to_dict(row: sqlite3.Row) -> Dict:
@@ -170,3 +184,87 @@ def export_markdown(canvas_id: int) -> str:
         sec("Pain Relievers", "pain_relievers"),
     ]
     return "\n".join(md)
+
+
+# ---------------------------
+# Agents CRUD
+# ---------------------------
+
+def list_agents() -> List[Dict]:
+    with get_conn() as conn:
+        cur = conn.execute(
+            "SELECT id, name, function, backend, model, updated_at FROM agents ORDER BY datetime(updated_at) DESC, name ASC"
+        )
+        rows = cur.fetchall()
+        return [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "function": r["function"],
+                "backend": r["backend"],
+                "model": r["model"],
+                "updated_at": r["updated_at"],
+            }
+            for r in rows
+        ]
+
+
+def get_agent_by_id(agent_id: int) -> Optional[Dict]:
+    with get_conn() as conn:
+        cur = conn.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
+        row = cur.fetchone()
+        return _row_to_dict(row) if row else None
+
+
+def get_agent_by_name(name: str) -> Optional[Dict]:
+    with get_conn() as conn:
+        cur = conn.execute("SELECT * FROM agents WHERE name = ?", (name,))
+        row = cur.fetchone()
+        return _row_to_dict(row) if row else None
+
+
+def save_agent(
+    *,
+    name: str,
+    function: str = "",
+    prompt: str = "",
+    backend: str = "",
+    model: str = "",
+    agent_id: Optional[int] = None,
+) -> Dict:
+    now = datetime.utcnow().isoformat(timespec="seconds")
+    with get_conn() as conn:
+        if agent_id is None:
+            cur = conn.execute(
+                """
+                INSERT INTO agents (
+                    name, function, prompt, backend, model, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    name,
+                    function,
+                    prompt,
+                    backend,
+                    model,
+                    now,
+                    now,
+                ),
+            )
+            new_id = cur.lastrowid
+            return {"id": new_id, "name": name, "updated_at": now}
+        else:
+            conn.execute(
+                """
+                UPDATE agents
+                SET name = ?, function = ?, prompt = ?, backend = ?, model = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (name, function, prompt, backend, model, now, agent_id),
+            )
+            return {"id": agent_id, "name": name, "updated_at": now}
+
+
+def delete_agent(agent_id: int) -> None:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM agents WHERE id = ?", (agent_id,))

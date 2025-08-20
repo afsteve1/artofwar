@@ -7,6 +7,42 @@ A minimal Streamlit app with local SQLite storage to create and manage Value Pro
 
 Data is stored locally in `strategy.db` next to the app. Export canvases as JSON or Markdown.
 
+## Agents (LLM-powered)
+
+Define reusable "agents" with:
+
+- Name and Function (role)
+- Prompt (instructions)
+- Backend and Model (OpenAI, Anthropic, OpenRouter, or local Ollama)
+
+You can run an agent against a task input and optionally include the current canvas as context. Output is shown inline.
+
+Supported backends (set the corresponding API key):
+
+- `openai` — requires `OPENAI_API_KEY`
+- `anthropic` — requires `ANTHROPIC_API_KEY`
+- `openrouter` — requires `OPENROUTER_API_KEY`
+- `ollama` — runs against local Ollama at `http://localhost:11434` (no key)
+- `echo` — debug fallback (just echoes input and context)
+
+Set keys using environment variables or Streamlit secrets.
+
+Environment variables (example):
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENROUTER_API_KEY="or-..."
+```
+
+Streamlit secrets (create `.streamlit/secrets.toml` next to `app.py`):
+
+```toml
+OPENAI_API_KEY = "sk-..."
+ANTHROPIC_API_KEY = "sk-ant-..."
+OPENROUTER_API_KEY = "or-..."
+```
+
 ## Quick Start
 
 1. Create a virtual environment (recommended) and install deps:
@@ -29,6 +65,7 @@ python3 -m venv .venv
 
 - `app.py` — Streamlit UI and interactions
 - `storage.py` — SQLite helpers and exports
+- `agents.py` — Multi-backend agent runner (OpenAI, Anthropic, OpenRouter, Ollama, echo)
 - `strategy.db` — Created on first run; local database
 - `requirements.txt` — Python dependencies
 
